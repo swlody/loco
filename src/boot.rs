@@ -146,39 +146,39 @@ pub enum RunDbCommand {
 ///
 /// Return an error when the given command fails. mostly return
 /// [`sea_orm::DbErr`]
-pub async fn run_db<H: Hooks, M: MigratorTrait>(
-    app_context: &AppContext,
-    cmd: RunDbCommand,
-) -> Result<()> {
-    match cmd {
-        RunDbCommand::Migrate => {
-            tracing::warn!("migrate:");
-            db::migrate::<M>(&app_context.db).await?;
-        }
-        RunDbCommand::Down(steps) => {
-            tracing::warn!("down:");
-            db::down::<M>(&app_context.db, steps).await?;
-        }
-        RunDbCommand::Reset => {
-            tracing::warn!("reset:");
-            db::reset::<M>(&app_context.db).await?;
-        }
-        RunDbCommand::Status => {
-            tracing::warn!("status:");
-            db::status::<M>(&app_context.db).await?;
-        }
-        RunDbCommand::Entities => {
-            tracing::warn!("entities:");
+// pub async fn run_db<H: Hooks, M: MigratorTrait>(
+//     app_context: &AppContext,
+//     cmd: RunDbCommand,
+// ) -> Result<()> {
+//     match cmd {
+//         RunDbCommand::Migrate => {
+//             tracing::warn!("migrate:");
+//             db::migrate::<M>(&app_context.db).await?;
+//         }
+//         RunDbCommand::Down(steps) => {
+//             tracing::warn!("down:");
+//             db::down::<M>(&app_context.db, steps).await?;
+//         }
+//         RunDbCommand::Reset => {
+//             tracing::warn!("reset:");
+//             db::reset::<M>(&app_context.db).await?;
+//         }
+//         RunDbCommand::Status => {
+//             tracing::warn!("status:");
+//             db::status::<M>(&app_context.db).await?;
+//         }
+//         RunDbCommand::Entities => {
+//             tracing::warn!("entities:");
 
-            tracing::warn!("{}", db::entities::<M>(app_context).await?);
-        }
-        RunDbCommand::Truncate => {
-            tracing::warn!("truncate:");
-            H::truncate(&app_context.db).await?;
-        }
-    }
-    Ok(())
-}
+//             tracing::warn!("{}", db::entities::<M>(app_context).await?);
+//         }
+//         RunDbCommand::Truncate => {
+//             tracing::warn!("truncate:");
+//             H::truncate(&app_context.db).await?;
+//         }
+//     }
+//     Ok(())
+// }
 
 /// Initializes the application context by loading configuration and
 /// establishing connections.

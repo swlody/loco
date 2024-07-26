@@ -38,9 +38,11 @@
 //! }
 //! ```
 
-#[cfg(feature = "with-db")]
-use sea_orm::DbErr;
+use std::fmt::Display;
+
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
+#[cfg(feature = "with-db")]
 use validator::{Validate, ValidationError, ValidationErrors};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -72,41 +74,12 @@ pub fn is_valid_email(email: &str) -> Result<(), ValidationError> {
 /// in the trait, we MUST use `DbErr`, so we need to "hide" a _representation_
 /// of the error in `DbErr::Custom`, so that it can be unpacked later down the
 /// stream, in the central error response handler.
+#[derive(Debug, Error)]
 pub struct ModelValidationErrors(pub ValidationErrors);
 
-#[cfg(feature = "with-db")]
-impl From<ModelValidationErrors> for DbErr {
-    fn from(errors: ModelValidationErrors) -> Self {
-        into_db_error(&errors)
-    }
-}
-
-#[cfg(feature = "with-db")]
-#[must_use]
-pub fn into_db_error(errors: &ModelValidationErrors) -> sea_orm::DbErr {
-    use std::collections::BTreeMap;
-
-    let errors = &errors.0;
-    let error_data: BTreeMap<String, Vec<ModelValidationMessage>> = errors
-        .field_errors()
-        .iter()
-        .map(|(field, field_errors)| {
-            let errors = field_errors
-                .iter()
-                .map(|err| ModelValidationMessage {
-                    code: err.code.to_string(),
-                    message: err.message.as_ref().map(std::string::ToString::to_string),
-                })
-                .collect();
-            ((*field).to_string(), errors)
-        })
-        .collect();
-    let json_errors = serde_json::to_value(error_data);
-    match json_errors {
-        Ok(errors_json) => sea_orm::DbErr::Custom(errors_json.to_string()),
-        Err(err) => sea_orm::DbErr::Custom(format!(
-            "[before_save] could not parse validation errors. err: {err}"
-        )),
+impl Display for ModelValidationErrors {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.to_string())
     }
 }
 

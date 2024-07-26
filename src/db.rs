@@ -3,17 +3,17 @@
 //! This module defines functions and operations related to the application's
 //! database interactions.
 
-use std::{collections::HashMap, fs::File, path::Path, time::Duration};
+use std::{fs::File, path::Path, str::FromStr as _, time::Duration};
 
 use duct::cmd;
 use fs_err as fs;
 use lazy_static::lazy_static;
 use regex::Regex;
 use sea_orm::{
-    ActiveModelTrait, ConnectOptions, ConnectionTrait, Database, DatabaseBackend,
-    DatabaseConnection, DbConn, EntityTrait, IntoActiveModel, Statement,
+    ActiveModelTrait, ConnectionTrait, Database, DatabaseConnection, EntityTrait, IntoActiveModel,
 };
 use sea_orm_migration::MigratorTrait;
+use sqlx::{ConnectOptions, PgPool};
 use tracing::info;
 
 use super::Result as AppResult;
@@ -32,66 +32,20 @@ lazy_static! {
     pub static ref EXTRACT_DB_NAME: Regex = Regex::new(r"/([^/]+)$").unwrap();
 }
 
-#[derive(Default, Clone)]
-pub struct MultiDb {
-    pub db: HashMap<String, DatabaseConnection>,
-}
-
-impl MultiDb {
-    /// Creating multiple DB connection from the given hashmap
-    ///
-    /// # Errors
-    ///
-    /// When could not create database connection
-    pub async fn new(dbs_config: HashMap<String, config::Database>) -> AppResult<Self> {
-        let mut multi_db = Self::default();
-
-        for (db_name, db_config) in dbs_config {
-            multi_db.db.insert(db_name, connect(&db_config).await?);
-        }
-
-        Ok(multi_db)
-    }
-
-    /// Retrieves a database connection instance based on the specified key
-    /// name.
-    ///
-    /// # Errors
-    ///
-    /// Returns an [`AppResult`] indicating an error if the specified key does
-    /// not correspond to a database connection in the current context.
-    pub fn get(&self, name: &str) -> AppResult<&DatabaseConnection> {
-        self.db
-            .get(name)
-            .map_or_else(|| Err(Error::Message("db not found".to_owned())), Ok)
-    }
-}
-
 /// Verifies a user has access to data within its database
 ///
 /// # Errors
 ///
 /// This function will return an error if IO fails
 #[allow(clippy::match_wildcard_for_single_variants)]
-pub async fn verify_access(db: &DatabaseConnection) -> AppResult<()> {
-    match db {
-        DatabaseConnection::SqlxPostgresPoolConnection(_) => {
-            let res = db
-                .query_all(Statement::from_string(
-                    DatabaseBackend::Postgres,
-                    "SELECT * FROM pg_catalog.pg_tables WHERE tableowner = current_user;",
-                ))
-                .await?;
-            if res.is_empty() {
-                return Err(Error::string(
-                    "current user has no access to tables in the database",
-                ));
-            }
-        }
-        DatabaseConnection::Disconnected => {
-            return Err(Error::string("connection to database has been closed"));
-        }
-        _ => {}
+pub async fn verify_access(db: &PgPool) -> AppResult<()> {
+    let res = sqlx::query("SELECT * FROM pg_catalog.pg_tables WHERE tableowner = current_user")
+        .fetch_all(db)
+        .await?;
+    if res.is_empty() {
+        return Err(Error::string(
+            "current user has no access to tables in the database",
+        ));
     }
     Ok(())
 }
@@ -103,19 +57,19 @@ pub async fn verify_access(db: &DatabaseConnection) -> AppResult<()> {
 /// return an `AppError` variant representing different database operation
 /// failures.
 pub async fn converge<H: Hooks, M: MigratorTrait>(
-    db: &DatabaseConnection,
+    db: &PgPool,
     config: &config::Database,
 ) -> AppResult<()> {
-    if config.dangerously_recreate {
-        info!("recreating schema");
-        reset::<M>(db).await?;
-        return Ok(());
-    }
+    // if config.dangerously_recreate {
+    //     info!("recreating schema");
+    //     reset::<M>(db).await?;
+    //     return Ok(());
+    // }
 
-    if config.auto_migrate {
-        info!("auto migrating");
-        migrate::<M>(db).await?;
-    }
+    // if config.auto_migrate {
+    //     info!("auto migrating");
+    //     migrate::<M>(db).await?;
+    // }
 
     if config.dangerously_truncate {
         info!("truncating tables");
@@ -131,19 +85,19 @@ pub async fn converge<H: Hooks, M: MigratorTrait>(
 ///
 /// Returns a [`sea_orm::DbErr`] if an error occurs during the database
 /// connection establishment.
-pub async fn connect(config: &config::Database) -> Result<DbConn, sea_orm::DbErr> {
-    let mut opt = ConnectOptions::new(&config.uri);
-    opt.max_connections(config.max_connections)
+pub async fn connect(config: &config::Database) -> Result<PgPool, sqlx::Error> {
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(config.max_connections)
         .min_connections(config.min_connections)
-        .connect_timeout(Duration::from_millis(config.connect_timeout))
-        .idle_timeout(Duration::from_millis(config.idle_timeout))
-        .sqlx_logging(config.enable_logging);
+        .acquire_timeout(Duration::from_millis(config.connect_timeout))
+        .idle_timeout(Duration::from_millis(config.idle_timeout));
 
-    if let Some(acquire_timeout) = config.acquire_timeout {
-        opt.acquire_timeout(Duration::from_millis(acquire_timeout));
+    let mut connect_options = sqlx::postgres::PgConnectOptions::from_str(&config.uri)?;
+    if !config.enable_logging {
+        connect_options = connect_options.disable_statement_logging();
     }
 
-    Database::connect(opt).await
+    pool.connect_with(connect_options).await
 }
 
 ///  Create a new database. This functionality is currently exclusive to Postgre
@@ -178,9 +132,9 @@ pub async fn create(db_uri: &str) -> AppResult<()> {
 /// # Errors
 ///
 /// Returns a [`sea_orm::DbErr`] if an error occurs during run migration up.
-pub async fn migrate<M: MigratorTrait>(db: &DatabaseConnection) -> Result<(), sea_orm::DbErr> {
-    M::up(db, None).await
-}
+// pub async fn migrate<M: MigratorTrait>(db: &PgPool) -> Result<(), sea_orm::DbErr> {
+//     M::up(db, None).await
+// }
 
 /// Revert migrations to the database using the provided migrator.
 ///
@@ -209,10 +163,10 @@ pub async fn status<M: MigratorTrait>(db: &DatabaseConnection) -> Result<(), sea
 /// # Errors
 ///
 /// Returns a [`sea_orm::DbErr`] if an error occurs during reset databases.
-pub async fn reset<M: MigratorTrait>(db: &DatabaseConnection) -> Result<(), sea_orm::DbErr> {
-    M::fresh(db).await?;
-    migrate::<M>(db).await
-}
+// pub async fn reset<M: MigratorTrait>(db: &PgPool) -> Result<(), sea_orm::DbErr> {
+//     M::fresh(db).await?;
+//     migrate::<M>(db).await
+// }
 
 /// Seed the database with data from a specified file.
 /// Seeds open the file path and insert all file content into the DB.
@@ -361,7 +315,7 @@ where
 /// # Errors
 ///
 /// when seed process is fails
-pub async fn run_app_seed<H: Hooks>(db: &DatabaseConnection, path: &Path) -> AppResult<()> {
+pub async fn run_app_seed<H: Hooks>(db: &PgPool, path: &Path) -> AppResult<()> {
     H::seed(db, path).await
 }
 

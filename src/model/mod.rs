@@ -4,8 +4,10 @@
 
 pub mod query;
 use async_trait::async_trait;
-use sea_orm::DatabaseConnection;
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
+
+use crate::validation::ModelValidationErrors;
 
 #[derive(Debug, Deserialize, Serialize)]
 #[allow(clippy::module_name_repetitions)]
@@ -26,11 +28,17 @@ pub enum ModelError {
     #[error("{errors:?}")]
     ModelValidation { errors: ModelValidation },
 
+    #[error(transparent)]
+    ModelValidationErrors(#[from] ModelValidationErrors),
+
     #[error("jwt error")]
     Jwt(#[from] jsonwebtoken::errors::Error),
 
     #[error(transparent)]
     DbErr(#[from] sea_orm::DbErr),
+
+    #[error(transparent)]
+    Sqlx(#[from] sqlx::Error),
 
     #[error(transparent)]
     Any(#[from] Box<dyn std::error::Error + Send + Sync>),
@@ -41,6 +49,6 @@ pub type ModelResult<T, E = ModelError> = std::result::Result<T, E>;
 
 #[async_trait]
 pub trait Authenticable: Clone {
-    async fn find_by_api_key(db: &DatabaseConnection, api_key: &str) -> ModelResult<Self>;
-    async fn find_by_claims_key(db: &DatabaseConnection, claims_key: &str) -> ModelResult<Self>;
+    async fn find_by_api_key(db: &PgPool, api_key: &str) -> ModelResult<Self>;
+    async fn find_by_claims_key(db: &PgPool, claims_key: &str) -> ModelResult<Self>;
 }

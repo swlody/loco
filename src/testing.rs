@@ -7,7 +7,7 @@
 use axum_test::{TestServer, TestServerConfig};
 use lazy_static::lazy_static;
 #[cfg(feature = "with-db")]
-use sea_orm::DatabaseConnection;
+use sqlx::PgPool;
 
 use crate::{
     app::{AppContext, Hooks},
@@ -149,7 +149,7 @@ pub async fn boot_test<H: Hooks>() -> Result<BootResult> {
 ///     assert!(false)
 /// }
 /// ```
-pub async fn seed<H: Hooks>(db: &DatabaseConnection) -> eyre::Result<()> {
+pub async fn seed<H: Hooks>(db: &PgPool) -> eyre::Result<()> {
     let path = std::path::Path::new("src/fixtures");
     Ok(H::seed(db, path).await?)
 }

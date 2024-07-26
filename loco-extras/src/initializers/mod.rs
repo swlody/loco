@@ -51,10 +51,6 @@
 //! ```rust
 #![doc = include_str!("././extra_db.rs")]
 //!````
-//! ### Extra Multiple Database Connections:
-//! ```rust
-#![doc = include_str!("././multi_db.rs")]
-//!````
 //! ### Normalize path:
 //! ```rust
 #![doc = include_str!("././normalize_path.rs")]
@@ -63,8 +59,6 @@
 pub mod extra_db;
 #[cfg(feature = "initializer-mongodb")]
 pub mod mongodb;
-#[cfg(feature = "initializer-multi-db")]
-pub mod multi_db;
 #[cfg(feature = "initializer-normalize-path")]
 pub mod normalize_path;
 #[cfg(feature = "initializer-opentelemetry")]

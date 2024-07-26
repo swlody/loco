@@ -17,12 +17,11 @@ struct Health {
 /// Check the healthiness of the application bt ping to the redis and the DB to
 /// insure that connection
 async fn health(State(ctx): State<AppContext>) -> Result<Response> {
-    let mut is_ok = match ctx.db.ping().await {
-        Ok(()) => true,
-        Err(error) => {
-            tracing::error!(err.msg = %error, err.detail = ?error, "health_db_ping_error");
-            false
-        }
+    let mut is_ok = if ctx.db.is_closed() {
+        true
+    } else {
+        tracing::error!("health_db_ping_error");
+        false
     };
     if let Some(pool) = ctx.queue {
         if let Err(error) = redis::ping(&pool).await {

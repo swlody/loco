@@ -3,7 +3,7 @@
 cfg_if::cfg_if! {
     if #[cfg(feature = "with-db")] {
         use std::path::Path;
-        use sea_orm::DatabaseConnection;
+        use sqlx::PgPool;
     } else {}
 
 }
@@ -40,7 +40,7 @@ pub struct AppContext {
     pub environment: Environment,
     #[cfg(feature = "with-db")]
     /// A database connection used by the application.
-    pub db: DatabaseConnection,
+    pub db: sqlx::PgPool,
     /// An optional connection pool for Queue, for worker tasks
     pub queue: Option<Pool<RedisConnectionManager>>,
     /// Configuration settings for the application
@@ -190,11 +190,11 @@ pub trait Hooks {
     /// Truncate can be useful when you want to truncate the database before any
     /// test.
     #[cfg(feature = "with-db")]
-    async fn truncate(db: &DatabaseConnection) -> Result<()>;
+    async fn truncate(db: &PgPool) -> Result<()>;
 
     /// Seeds the database with initial data.
     #[cfg(feature = "with-db")]
-    async fn seed(db: &DatabaseConnection, path: &Path) -> Result<()>;
+    async fn seed(db: &PgPool, path: &Path) -> Result<()>;
 }
 
 /// An initializer.

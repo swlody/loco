@@ -18,7 +18,7 @@ cfg_if::cfg_if! {
     if #[cfg(feature = "with-db")] {
         use sea_orm_migration::MigratorTrait;
         use crate::doctor;
-        use crate::boot::{run_db};
+        // use crate::boot::{run_db};
         use crate::db;
         use std::process::exit;
     } else {}
@@ -203,7 +203,8 @@ enum DbCommands {
     Create,
     /// Migrate schema (up)
     Migrate,
-    /// Run one down migration, or add a number to run multiple down migrations (i.e. `down 2`)
+    /// Run one down migration, or add a number to run multiple down migrations
+    /// (i.e. `down 2`)
     Down {
         /// The number of migrations to rollback
         #[arg(default_value_t = 1)]
@@ -331,8 +332,8 @@ pub async fn main<H: Hooks, M: MigratorTrait>() -> eyre::Result<()> {
             if matches!(command, DbCommands::Create) {
                 db::create(&environment.load()?.database.uri).await?;
             } else {
-                let app_context = create_context::<H>(&environment).await?;
-                run_db::<H, M>(&app_context, command.into()).await?;
+                // let app_context = create_context::<H>(&environment).await?;
+                // run_db::<H, M>(&app_context, command.into()).await?;
             }
         }
         Commands::Routes {} => {

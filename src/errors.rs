@@ -72,6 +72,10 @@ pub enum Error {
     #[error(transparent)]
     DB(#[from] sea_orm::DbErr),
 
+    #[cfg(feature = "with-db")]
+    #[error(transparent)]
+    Sqlx(#[from] sqlx::Error),
+
     #[error(transparent)]
     RRgen(#[from] rrgen::Error),
 

@@ -26,7 +26,7 @@ default = ["auth_jwt", "cli", "with-db", "cache_inmem"]
 auth_jwt = ["dep:jsonwebtoken"]
 cli = ["dep:clap"]
 testing = ["dep:axum-test"]
-with-db = ["dep:sea-orm", "dep:sea-orm-migration"]
+with-db = ["dep:sea-orm", "dep:sea-orm-migration", "dep:sqlx"]
 channels = ["dep:socketioxide"]
 # Storage features
 all_storage = ["storage_aws_s3", "storage_azure", "storage_gcp"]
@@ -51,6 +51,12 @@ sea-orm = { version = "1.0.0-rc.7", features = [
   "sqlx-sqlite",
   "runtime-tokio-rustls",
   "macros",
+], optional = true }
+sqlx = { version = "0.7.4", default-features = false, features = [
+  "postgres",
+  "runtime-tokio-rustls",
+  "macros",
+  "uuid",
 ], optional = true }
 
 tokio = { version = "1.33.0", default-features = false }

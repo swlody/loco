@@ -99,25 +99,28 @@ pub async fn run_all(config: &Config) -> BTreeMap<Resource, Check> {
 /// Checks the database connection.
 pub async fn check_db(config: &Database) -> Check {
     match db::connect(config).await {
-        Ok(conn) => match conn.ping().await {
-            Ok(()) => match db::verify_access(&conn).await {
-                Ok(()) => Check {
-                    status: CheckStatus::Ok,
-                    message: DB_CONNECTION_SUCCESS.to_string(),
-                    description: None,
-                },
-                Err(err) => Check {
+        Ok(conn) => {
+            if !conn.is_closed() {
+                match db::verify_access(&conn).await {
+                    Ok(()) => Check {
+                        status: CheckStatus::Ok,
+                        message: DB_CONNECTION_SUCCESS.to_string(),
+                        description: None,
+                    },
+                    Err(err) => Check {
+                        status: CheckStatus::NotOk,
+                        message: DB_CONNECTION_FAILED.to_string(),
+                        description: Some(err.to_string()),
+                    },
+                }
+            } else {
+                Check {
                     status: CheckStatus::NotOk,
                     message: DB_CONNECTION_FAILED.to_string(),
-                    description: Some(err.to_string()),
-                },
-            },
-            Err(err) => Check {
-                status: CheckStatus::NotOk,
-                message: DB_CONNECTION_FAILED.to_string(),
-                description: Some(err.to_string()),
-            },
-        },
+                    description: Some("PgPool connection is closed".to_string()),
+                }
+            }
+        }
         Err(err) => Check {
             status: CheckStatus::NotOk,
             message: DB_CONNECTION_FAILED.to_string(),
