@@ -129,10 +129,6 @@ mod tests {
             name: name.to_string(),
         };
 
-        assert_debug_snapshot!(
-            format!("struct-[{name}]"),
-            data.validate()
-                .map_err(|e| into_db_error(&ModelValidationErrors(e)))
-        );
+        assert_debug_snapshot!(format!("struct-[{name}]"), data.validate());
     }
 }

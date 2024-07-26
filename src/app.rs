@@ -192,6 +192,10 @@ pub trait Hooks {
     #[cfg(feature = "with-db")]
     async fn truncate(db: &PgPool) -> Result<()>;
 
+    // Runs migrations on the database.
+    #[cfg(feature = "with-db")]
+    async fn migrate(db: &PgPool) -> Result<()>;
+
     /// Seeds the database with initial data.
     #[cfg(feature = "with-db")]
     async fn seed(db: &PgPool, path: &Path) -> Result<()>;

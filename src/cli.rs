@@ -16,10 +16,8 @@
 //! ```
 cfg_if::cfg_if! {
     if #[cfg(feature = "with-db")] {
-        use sea_orm_migration::MigratorTrait;
         use crate::doctor;
         // use crate::boot::{run_db};
-        use crate::db;
         use std::process::exit;
     } else {}
 }
@@ -28,12 +26,8 @@ use clap::{Parser, Subcommand};
 
 use crate::{
     app::{AppContext, Hooks},
-    boot::{
-        create_app, create_context, list_endpoints, run_task, start, RunDbCommand, ServeParams,
-        StartMode,
-    },
+    boot::{create_app, create_context, list_endpoints, run_task, start, ServeParams, StartMode},
     environment::{resolve_from_env, Environment, DEFAULT_ENVIRONMENT},
-    gen::{self, Component},
     logger, task,
 };
 #[derive(Parser)]
@@ -74,12 +68,6 @@ enum Commands {
         #[arg(short, long, action)]
         port: Option<i32>,
     },
-    #[cfg(feature = "with-db")]
-    /// Perform DB operations
-    Db {
-        #[command(subcommand)]
-        command: DbCommands,
-    },
     /// Describe all application endpoints
     Routes {},
     /// Run a custom task
@@ -90,13 +78,6 @@ enum Commands {
         #[clap(value_parser = parse_key_val::<String,String>)]
         params: Vec<(String, String)>,
     },
-    /// code generation creates a set of files and code templates based on a
-    /// predefined set of rules.
-    Generate {
-        /// What to generate
-        #[command(subcommand)]
-        component: ComponentArg,
-    },
     #[cfg(feature = "with-db")]
     /// Validate and diagnose configurations.
     Doctor {},
@@ -106,45 +87,6 @@ enum Commands {
 
 #[derive(Subcommand)]
 enum ComponentArg {
-    #[cfg(feature = "with-db")]
-    /// Generates a new model file for defining the data structure of your
-    /// application, and test file logic.
-    Model {
-        /// Name of the thing to generate
-        name: String,
-
-        /// Is it a link table? Use this in many-to-many relations
-        #[arg(short, long, action)]
-        link: bool,
-
-        /// Generate migration code only. Don't run the migration automatically.
-        #[arg(short, long, action)]
-        migration_only: bool,
-
-        /// Model fields, eg. title:string hits:int
-        #[clap(value_parser = parse_key_val::<String,String>)]
-        fields: Vec<(String, String)>,
-    },
-    #[cfg(feature = "with-db")]
-    /// Generates a new migration file
-    Migration {
-        /// Name of the migration to generate
-        name: String,
-    },
-    #[cfg(feature = "with-db")]
-    /// Generates a CRUD scaffold, model and controller
-    Scaffold {
-        /// Name of the thing to generate
-        name: String,
-
-        /// Model fields, eg. title:string hits:int
-        #[clap(value_parser = parse_key_val::<String,String>)]
-        fields: Vec<(String, String)>,
-
-        /// The kind of scaffold to generate
-        #[clap(short, long, value_enum, default_value_t = gen::ScaffoldKind::Api)]
-        kind: gen::ScaffoldKind,
-    },
     /// Generate a new controller with the given controller name, and test file.
     Controller {
         /// Name of the thing to generate
@@ -167,73 +109,6 @@ enum ComponentArg {
     },
     /// Generate a deployment infrastructure
     Deployment {},
-}
-
-impl From<ComponentArg> for Component {
-    fn from(value: ComponentArg) -> Self {
-        match value {
-            #[cfg(feature = "with-db")]
-            ComponentArg::Model {
-                name,
-                link,
-                migration_only,
-                fields,
-            } => Self::Model {
-                name,
-                link,
-                migration_only,
-                fields,
-            },
-            #[cfg(feature = "with-db")]
-            ComponentArg::Migration { name } => Self::Migration { name },
-            #[cfg(feature = "with-db")]
-            ComponentArg::Scaffold { name, fields, kind } => Self::Scaffold { name, fields, kind },
-            ComponentArg::Controller { name } => Self::Controller { name },
-            ComponentArg::Task { name } => Self::Task { name },
-            ComponentArg::Worker { name } => Self::Worker { name },
-            ComponentArg::Mailer { name } => Self::Mailer { name },
-            ComponentArg::Deployment {} => Self::Deployment {},
-        }
-    }
-}
-
-#[derive(Subcommand)]
-enum DbCommands {
-    /// Create schema
-    Create,
-    /// Migrate schema (up)
-    Migrate,
-    /// Run one down migration, or add a number to run multiple down migrations
-    /// (i.e. `down 2`)
-    Down {
-        /// The number of migrations to rollback
-        #[arg(default_value_t = 1)]
-        steps: u32,
-    },
-    /// Drop all tables, then reapply all migrations
-    Reset,
-    /// Migration status
-    Status,
-    /// Generate entity .rs files from database schema
-    Entities,
-    /// Truncate data in tables (without dropping)
-    Truncate,
-}
-
-impl From<DbCommands> for RunDbCommand {
-    fn from(value: DbCommands) -> Self {
-        match value {
-            DbCommands::Migrate => Self::Migrate,
-            DbCommands::Down { steps } => Self::Down(steps),
-            DbCommands::Reset => Self::Reset,
-            DbCommands::Status => Self::Status,
-            DbCommands::Entities => Self::Entities,
-            DbCommands::Truncate => Self::Truncate,
-            DbCommands::Create => {
-                unreachable!("Create db should't handled in the global db commands")
-            }
-        }
-    }
 }
 
 /// Parse a single key-value pair
@@ -291,7 +166,7 @@ pub async fn playground<H: Hooks>() -> crate::Result<AppContext> {
 /// }
 /// ```
 #[cfg(feature = "with-db")]
-pub async fn main<H: Hooks, M: MigratorTrait>() -> eyre::Result<()> {
+pub async fn main<H: Hooks>() -> eyre::Result<()> {
     let cli: Cli = Cli::parse();
     let environment: Environment = cli.environment.unwrap_or_else(resolve_from_env).into();
 
@@ -319,22 +194,13 @@ pub async fn main<H: Hooks, M: MigratorTrait>() -> eyre::Result<()> {
                 StartMode::ServerOnly
             };
 
-            let boot_result = create_app::<H, M>(start_mode, &environment).await?;
+            let boot_result = create_app::<H>(start_mode, &environment).await?;
             let serve_params = ServeParams {
                 port: port.map_or(boot_result.app_context.config.server.port, |p| p),
                 binding: binding
                     .unwrap_or_else(|| boot_result.app_context.config.server.binding.to_string()),
             };
             start::<H>(boot_result, serve_params).await?;
-        }
-        #[cfg(feature = "with-db")]
-        Commands::Db { command } => {
-            if matches!(command, DbCommands::Create) {
-                db::create(&environment.load()?.database.uri).await?;
-            } else {
-                // let app_context = create_context::<H>(&environment).await?;
-                // run_db::<H, M>(&app_context, command.into()).await?;
-            }
         }
         Commands::Routes {} => {
             let app_context = create_context::<H>(&environment).await?;
@@ -344,9 +210,6 @@ pub async fn main<H: Hooks, M: MigratorTrait>() -> eyre::Result<()> {
             let vars = task::Vars::from_cli_args(params);
             let app_context = create_context::<H>(&environment).await?;
             run_task::<H>(&app_context, name.as_ref(), &vars).await?;
-        }
-        Commands::Generate { component } => {
-            gen::generate::<H>(component.into(), &config)?;
         }
         Commands::Doctor {} => {
             let mut should_exit = false;

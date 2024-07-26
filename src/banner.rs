@@ -3,20 +3,20 @@ use colored::Colorize;
 use crate::boot::{BootResult, ServeParams};
 
 pub const BANNER: &str = r"
-                      ▄     ▀                     
-                                 ▀  ▄             
-                  ▄       ▀     ▄  ▄ ▄▀           
-                                    ▄ ▀▄▄         
-                        ▄     ▀    ▀  ▀▄▀█▄       
-                                          ▀█▄     
-▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄▄▄ ▀▀█    
- ██████  █████   ███ █████   ███ █████   ███ ▀█   
- ██████  █████   ███ █████   ▀▀▀ █████   ███ ▄█▄  
+                      ▄     ▀
+                                 ▀  ▄
+                  ▄       ▀     ▄  ▄ ▄▀
+                                    ▄ ▀▄▄
+                        ▄     ▀    ▀  ▀▄▀█▄
+                                          ▀█▄
+▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄   ▄▄▄▄▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄▄▄ ▀▀█
+ ██████  █████   ███ █████   ███ █████   ███ ▀█
+ ██████  █████   ███ █████   ▀▀▀ █████   ███ ▄█▄
  ██████  █████   ███ █████       █████   ███ ████▄
  ██████  █████   ███ █████   ▄▄▄ █████   ███ █████
  ██████  █████   ███  ████   ███ █████   ███ ████▀
-   ▀▀▀██▄ ▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀ ██▀  
-       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀    
+   ▀▀▀██▄ ▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀ ██▀
+       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
                 https://loco.rs
 ";
 
@@ -35,9 +35,6 @@ pub fn print_banner(boot_result: &BootResult, server_config: &ServeParams) {
         }
         if config.database.auto_migrate {
             database.push("automigrate".yellow());
-        }
-        if config.database.dangerously_recreate {
-            database.push("recreate".bright_red());
         }
         if config.database.dangerously_truncate {
             database.push("truncate".bright_red());

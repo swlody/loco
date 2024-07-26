@@ -14,8 +14,6 @@ pub mod doctor;
 pub mod db;
 #[cfg(feature = "with-db")]
 pub mod model;
-#[cfg(feature = "with-db")]
-pub mod schema;
 mod tera;
 
 pub mod app;
@@ -29,7 +27,6 @@ pub mod config;
 pub mod controller;
 pub mod environment;
 pub mod errors;
-mod gen;
 pub mod hash;
 mod logger;
 pub mod mailer;

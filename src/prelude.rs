@@ -5,19 +5,12 @@ pub use axum::{
     routing::{delete, get, post, put},
 };
 pub use axum_extra::extract::cookie;
-pub use chrono::NaiveDateTime as DateTime;
 pub use include_dir::{include_dir, Dir};
-#[cfg(feature = "with-db")]
-pub use sea_orm::{
-    ActiveModelBehavior, ActiveModelTrait, ActiveValue, ColumnTrait, ConnectionTrait,
-    DatabaseConnection, DbErr, EntityTrait, IntoActiveModel, ModelTrait, QueryFilter, Set,
-    TransactionTrait,
-};
 
 #[cfg(all(feature = "auth_jwt", feature = "with-db"))]
 pub use crate::controller::middleware::auth;
 #[cfg(feature = "with-db")]
-pub use crate::model::{query, Authenticable, ModelError, ModelResult};
+pub use crate::model::{Authenticable, ModelError, ModelResult};
 pub use crate::{
     app::{AppContext, Initializer},
     controller::{
@@ -36,8 +29,3 @@ pub use crate::{
     worker::{self, AppWorker},
     Result,
 };
-
-#[cfg(feature = "with-db")]
-pub mod model {
-    pub use crate::model::query;
-}

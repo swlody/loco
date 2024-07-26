@@ -2,7 +2,6 @@
 //!
 //! Useful when using `sea_orm` and want to propagate errors
 
-pub mod query;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
@@ -33,9 +32,6 @@ pub enum ModelError {
 
     #[error("jwt error")]
     Jwt(#[from] jsonwebtoken::errors::Error),
-
-    #[error(transparent)]
-    DbErr(#[from] sea_orm::DbErr),
 
     #[error(transparent)]
     Sqlx(#[from] sqlx::Error),

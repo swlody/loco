@@ -1,9 +1,24 @@
 ---
 source: src/validation.rs
-expression: data.validate().map_err(into_db_error)
+expression: data.validate()
 ---
 Err(
-    Custom(
-        "{\"name\":[{\"code\":\"length\",\"message\":\"Invalid min characters long.\"}]}",
+    ValidationErrors(
+        {
+            "name": Field(
+                [
+                    ValidationError {
+                        code: "length",
+                        message: Some(
+                            "Invalid min characters long.",
+                        ),
+                        params: {
+                            "min": Number(4),
+                            "value": String("foo"),
+                        },
+                    },
+                ],
+            ),
+        },
     ),
 )

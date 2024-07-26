@@ -168,13 +168,6 @@ pub struct Database {
     /// tables. Commonly used in `test`.
     #[serde(default)]
     pub dangerously_truncate: bool,
-
-    /// Recreate schema when application loads. Use it when you want to reset
-    /// your database *and* structure (drop), this also deletes all of the data.
-    /// Useful when you're just sketching out your project and trying out
-    /// various things in development.
-    #[serde(default)]
-    pub dangerously_recreate: bool,
 }
 
 /// Redis Configuration

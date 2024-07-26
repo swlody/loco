@@ -2,8 +2,6 @@
 //! This module contains functions and structures for bootstrapping and running
 //! your application.
 use axum::Router;
-#[cfg(feature = "with-db")]
-use sea_orm_migration::MigratorTrait;
 use tracing::{info, trace, warn};
 
 #[cfg(feature = "with-db")]
@@ -121,65 +119,6 @@ pub async fn run_task<H: Hooks>(
     Ok(())
 }
 
-/// Represents commands for handling database-related operations.
-#[derive(Debug)]
-pub enum RunDbCommand {
-    /// Apply pending migrations.
-    Migrate,
-    /// Run one or more down migrations.
-    Down(u32),
-    /// Drop all tables, then reapply all migrations.
-    Reset,
-    /// Check the status of all migrations.
-    Status,
-    /// Generate entity.
-    Entities,
-    /// Truncate tables, by executing the implementation in [`Hooks::seed`]
-    /// (without dropping).
-    Truncate,
-}
-
-#[cfg(feature = "with-db")]
-/// Handles database commands.
-///
-/// # Errors
-///
-/// Return an error when the given command fails. mostly return
-/// [`sea_orm::DbErr`]
-// pub async fn run_db<H: Hooks, M: MigratorTrait>(
-//     app_context: &AppContext,
-//     cmd: RunDbCommand,
-// ) -> Result<()> {
-//     match cmd {
-//         RunDbCommand::Migrate => {
-//             tracing::warn!("migrate:");
-//             db::migrate::<M>(&app_context.db).await?;
-//         }
-//         RunDbCommand::Down(steps) => {
-//             tracing::warn!("down:");
-//             db::down::<M>(&app_context.db, steps).await?;
-//         }
-//         RunDbCommand::Reset => {
-//             tracing::warn!("reset:");
-//             db::reset::<M>(&app_context.db).await?;
-//         }
-//         RunDbCommand::Status => {
-//             tracing::warn!("status:");
-//             db::status::<M>(&app_context.db).await?;
-//         }
-//         RunDbCommand::Entities => {
-//             tracing::warn!("entities:");
-
-//             tracing::warn!("{}", db::entities::<M>(app_context).await?);
-//         }
-//         RunDbCommand::Truncate => {
-//             tracing::warn!("truncate:");
-//             H::truncate(&app_context.db).await?;
-//         }
-//     }
-//     Ok(())
-// }
-
 /// Initializes the application context by loading configuration and
 /// establishing connections.
 ///
@@ -224,12 +163,12 @@ pub async fn create_context<H: Hooks>(environment: &Environment) -> Result<AppCo
 /// # Errors
 ///
 /// When could not create the application
-pub async fn create_app<H: Hooks, M: MigratorTrait>(
+pub async fn create_app<H: Hooks>(
     mode: StartMode,
     environment: &Environment,
 ) -> Result<BootResult> {
     let app_context = create_context::<H>(environment).await?;
-    db::converge::<H, M>(&app_context.db, &app_context.config.database).await?;
+    db::converge::<H>(&app_context.db, &app_context.config.database).await?;
 
     if let Some(pool) = &app_context.queue {
         redis::converge(pool, &app_context.config.queue).await?;

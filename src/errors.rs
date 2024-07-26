@@ -70,11 +70,11 @@ pub enum Error {
 
     #[cfg(feature = "with-db")]
     #[error(transparent)]
-    DB(#[from] sea_orm::DbErr),
+    Sqlx(#[from] sqlx::Error),
 
     #[cfg(feature = "with-db")]
     #[error(transparent)]
-    Sqlx(#[from] sqlx::Error),
+    MigrateError(#[from] sqlx::migrate::MigrateError),
 
     #[error(transparent)]
     RRgen(#[from] rrgen::Error),
