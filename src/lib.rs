@@ -8,9 +8,6 @@ mod banner;
 pub mod prelude;
 
 #[cfg(feature = "with-db")]
-pub mod doctor;
-
-#[cfg(feature = "with-db")]
 pub mod db;
 #[cfg(feature = "with-db")]
 pub mod model;
@@ -31,7 +28,6 @@ pub mod hash;
 mod logger;
 pub mod mailer;
 mod redis;
-pub mod task;
 #[cfg(feature = "testing")]
 pub mod testing;
 #[cfg(feature = "testing")]

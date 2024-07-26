@@ -14,21 +14,13 @@
 //!     cli::main::<App, Migrator>().await
 //! }
 //! ```
-cfg_if::cfg_if! {
-    if #[cfg(feature = "with-db")] {
-        use crate::doctor;
-        // use crate::boot::{run_db};
-        use std::process::exit;
-    } else {}
-}
-
 use clap::{Parser, Subcommand};
 
 use crate::{
     app::{AppContext, Hooks},
-    boot::{create_app, create_context, list_endpoints, run_task, start, ServeParams, StartMode},
+    boot::{create_app, create_context, list_endpoints, start, ServeParams, StartMode},
     environment::{resolve_from_env, Environment, DEFAULT_ENVIRONMENT},
-    logger, task,
+    logger,
 };
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -70,61 +62,9 @@ enum Commands {
     },
     /// Describe all application endpoints
     Routes {},
-    /// Run a custom task
-    Task {
-        /// Task name (identifier)
-        name: Option<String>,
-        /// Task params (e.g. <`my_task`> foo:bar baz:qux)
-        #[clap(value_parser = parse_key_val::<String,String>)]
-        params: Vec<(String, String)>,
-    },
     #[cfg(feature = "with-db")]
-    /// Validate and diagnose configurations.
-    Doctor {},
     /// Display the app version
     Version {},
-}
-
-#[derive(Subcommand)]
-enum ComponentArg {
-    /// Generate a new controller with the given controller name, and test file.
-    Controller {
-        /// Name of the thing to generate
-        name: String,
-    },
-    /// Generate a Task based on the given name
-    Task {
-        /// Name of the thing to generate
-        name: String,
-    },
-    /// Generate worker
-    Worker {
-        /// Name of the thing to generate
-        name: String,
-    },
-    /// Generate mailer
-    Mailer {
-        /// Name of the thing to generate
-        name: String,
-    },
-    /// Generate a deployment infrastructure
-    Deployment {},
-}
-
-/// Parse a single key-value pair
-fn parse_key_val<T, U>(
-    s: &str,
-) -> std::result::Result<(T, U), Box<dyn std::error::Error + Send + Sync>>
-where
-    T: std::str::FromStr,
-    T::Err: std::error::Error + Send + Sync + 'static,
-    U: std::str::FromStr,
-    U::Err: std::error::Error + Send + Sync + 'static,
-{
-    let pos = s
-        .find(':')
-        .ok_or_else(|| format!("invalid KEY=value: no `:` found in `{s}`"))?;
-    Ok((s[..pos].parse()?, s[pos + 1..].parse()?))
 }
 
 #[cfg(feature = "with-db")]
@@ -205,23 +145,6 @@ pub async fn main<H: Hooks>() -> eyre::Result<()> {
         Commands::Routes {} => {
             let app_context = create_context::<H>(&environment).await?;
             show_list_endpoints::<H>(&app_context);
-        }
-        Commands::Task { name, params } => {
-            let vars = task::Vars::from_cli_args(params);
-            let app_context = create_context::<H>(&environment).await?;
-            run_task::<H>(&app_context, name.as_ref(), &vars).await?;
-        }
-        Commands::Doctor {} => {
-            let mut should_exit = false;
-            for (_, check) in doctor::run_all(&config).await {
-                if !should_exit && !check.valid() {
-                    should_exit = true;
-                }
-                println!("{check}");
-            }
-            if should_exit {
-                exit(1);
-            }
         }
         Commands::Version {} => {
             println!("{}", H::app_version(),);

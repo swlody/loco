@@ -38,9 +38,6 @@ pub enum Error {
     #[error("{0}")]
     Message(String),
 
-    #[error("task not found: '{0}'")]
-    TaskNotFound(String),
-
     #[error(transparent)]
     Axum(#[from] axum::http::Error),
 

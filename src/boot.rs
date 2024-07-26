@@ -17,7 +17,6 @@ use crate::{
     mailer::{EmailSender, MailerWorker},
     redis,
     storage::{self, Storage},
-    task::{self, Tasks},
     worker::{self, AppWorker, Pool, Processor, RedisConnectionManager, DEFAULT_QUEUES},
     Result,
 };
@@ -90,32 +89,6 @@ pub async fn start<H: Hooks>(boot: BootResult, server_config: ServeParams) -> Re
 
 async fn process(processor: Processor) -> Result<()> {
     processor.run().await;
-    Ok(())
-}
-
-/// Run task
-///
-/// # Errors
-///
-/// When running could not run the task.
-pub async fn run_task<H: Hooks>(
-    app_context: &AppContext,
-    task: Option<&String>,
-    vars: &task::Vars,
-) -> Result<()> {
-    let mut tasks = Tasks::default();
-    H::register_tasks(&mut tasks);
-
-    if let Some(task) = task {
-        let task_span = tracing::span!(tracing::Level::DEBUG, "task", task,);
-        let _guard = task_span.enter();
-        tasks.run(app_context, task, vars).await?;
-    } else {
-        let list = tasks.list();
-        for item in &list {
-            println!("{:<30}[{}]", item.name, item.detail);
-        }
-    }
     Ok(())
 }
 

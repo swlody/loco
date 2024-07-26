@@ -81,15 +81,15 @@ pub async fn connect(config: &config::Database) -> Result<PgPool, sqlx::Error> {
     pool.connect_with(connect_options).await
 }
 
-/// Seed the database with data from a specified file.
-/// Seeds open the file path and insert all file content into the DB.
-///
-/// The file content should be equal to the DB field parameters.
-///
-/// # Errors
-///
-/// Returns a [`AppResult`] if could not render the path content into
-/// [`Vec<serde_json::Value>`] or could not inset the vector to DB.
+// / Seed the database with data from a specified file.
+// / Seeds open the file path and insert all file content into the DB.
+// /
+// / The file content should be equal to the DB field parameters.
+// /
+// / # Errors
+// /
+// / Returns a [`AppResult`] if could not render the path content into
+// / [`Vec<serde_json::Value>`] or could not inset the vector to DB.
 // #[allow(clippy::type_repetition_in_bounds)]
 // pub async fn seed<A>(db: &DatabaseConnection, path: &str) -> AppResult<()>
 // where

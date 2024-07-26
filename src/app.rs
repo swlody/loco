@@ -22,7 +22,6 @@ use crate::{
     environment::Environment,
     mailer::EmailSender,
     storage::Storage,
-    task::Tasks,
     worker::{Pool, Processor, RedisConnectionManager},
     Result,
 };
@@ -180,9 +179,6 @@ pub trait Hooks {
     /// Connects custom workers to the application using the provided
     /// [`Processor`] and [`AppContext`].
     fn connect_workers<'a>(p: &'a mut Processor, ctx: &'a AppContext);
-
-    /// Registers custom tasks with the provided [`Tasks`] object.
-    fn register_tasks(tasks: &mut Tasks);
 
     /// Truncates the database as required. Users should implement this
     /// function. The truncate controlled from the [`crate::config::Database`]
